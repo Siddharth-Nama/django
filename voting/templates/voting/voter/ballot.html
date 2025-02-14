@@ -1,0 +1,395 @@
+{% extends 'root.html' %}
+
+
+
+
+
+{% block content %}
+<section class="content">
+  <h1 class="page-header text-center title"><b>{{ TITLE }}</b></h1>
+  <div class="row">
+    <div class="col-sm-10 col-sm-offset-1">
+      <div class="alert alert-danger alert-dismissible" id="alert" style="display:none;">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+        <span class="message"></span>
+      </div>
+
+      <!-- Ballot Form -->
+      <form method="POST" id="ballotForm" action="{% url 'submit_ballot' %}">
+        {% csrf_token %}
+        <div id="ballot-container">
+          {{ ballot|safe }}
+        </div>
+        <div class="text-center">
+          <button type="button" class="btn btn-success btn-flat" id="preview"><i class="fa fa-file-text"></i> Preview</button>
+          <button type="submit" class="btn btn-primary btn-flat" name="submit_vote"><i class="fa fa-check-square-o"></i> Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock content %}
+
+{% block custom_js %}
+<script>
+  function navigateToPosition(index) {
+      // Hide all positions
+      document.querySelectorAll('.ballot-position').forEach((position) => {
+          position.style.display = 'none';
+      });
+
+      // Show the selected position
+      const targetPosition = document.getElementById(`position-${index}`);
+      if (targetPosition) {
+          targetPosition.style.display = 'block';
+      }
+  }
+</script>
+
+<script>
+$(function() {
+    // Terms Modal on Page Load
+    $('#terms_modal').modal('show');
+
+    // Accept Terms and Hide Modal
+    $('#accept_terms').click(function() {
+        $('#terms_modal').modal('hide');
+    });
+
+    // iCheck plugin initialization
+    $('.content').iCheck({
+        checkboxClass: 'icheckbox_flat-green',
+        radioClass: 'iradio_flat-green'
+    });
+
+    // Reset button functionality
+    $(document).on('click', '.reset', function(e) {
+        e.preventDefault();
+        var desc = $(this).data('desc');
+        $('.' + desc).iCheck('uncheck');
+    });
+
+    // Show Bio Modal on Platform Click
+    $(document).on('click', '.platform', function(e) {
+        e.preventDefault();
+        $('#bio').modal('show');
+        var platform = $(this).data('bio');
+        var fullname = $(this).data('fullname');
+        $('.candidate').html(fullname);
+        $('#plat_view').html(platform);
+    });
+
+    // Preview button functionality
+    $('#preview').click(function(e) {
+        e.preventDefault();
+        var form = $('#ballotForm').serialize();
+        if (form.search("&") < 0 || form == '') {
+            toastr.error('You must vote at least one candidate', "Preview Error");
+        } else {
+            $.ajax({
+                type: 'POST',
+                url: '{% url "preview_vote" %}',
+                data: form,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.error) {
+                        var errmsg = '';
+                        var messages = response.message;
+                        for (i in messages) {
+                            errmsg += messages[i];
+                        }
+                        toastr.error(errmsg, "Preview Error")
+                    } else {
+                        $('#preview_modal').modal('show');
+                        $('#preview_body').html(response.list);
+                    }
+                }
+            });
+        }
+    });
+
+    // Vertical ballot navigation
+    let currentPosition = 0;
+    const positions = $('.ballot-position');
+
+    function showPosition(index) {
+        positions.show();
+        positions.eq(index).show();
+        updateNavigationButtons();
+    }
+    var form = $('#ballotForm').serialize();
+    console.log('Number of positions:', positions.length);
+    console.log('Number of Form:', form);
+
+    function updateNavigationButtons() {
+        $('.prev-position').prop('disabled', currentPosition === 0);
+        $('.next-position').prop('disabled', currentPosition === positions.length - 1);
+        if (currentPosition === positions.length - 1) {
+            $('.next-position').text('Submit');
+        } else {
+            $('.next-position').text('Next');
+        }
+    }
+
+    $(document).on('click', '.next-position', function() {
+        if (currentPosition < positions.length - 1) {
+            currentPosition++;
+            showPosition(currentPosition);
+        } else {
+            // Submit the form
+            $('#ballotForm').submit();
+        }
+    });
+
+    $(document).on('click', '.prev-position', function() {
+        if (currentPosition > 0) {
+            currentPosition--;
+            showPosition(currentPosition);
+        }
+    });
+
+    // Show the first position immediately
+    showPosition(0);
+});
+$(function() {
+    // Terms Modal on Page Load
+    $('#terms_modal').modal('show');
+
+    // Accept Terms and Hide Modal
+    $('#accept_terms').click(function() {
+        $('#terms_modal').modal('hide');
+    });
+
+    // iCheck plugin initialization
+    $('.content').iCheck({
+        checkboxClass: 'icheckbox_flat-green',
+        radioClass: 'iradio_flat-green'
+    });
+
+    // Reset button functionality
+    $(document).on('click', '.reset', function(e) {
+        e.preventDefault();
+        var desc = $(this).data('desc');
+        $('.' + desc).iCheck('uncheck');
+    });
+
+    // Show Bio Modal on Platform Click
+    $(document).on('click', '.platform', function(e) {
+        e.preventDefault();
+        $('#bio').modal('show');
+        var platform = $(this).data('bio');
+        var fullname = $(this).data('fullname');
+        $('.candidate').html(fullname);
+        $('#plat_view').html(platform);
+    });
+
+    // Preview button functionality
+    $('#preview').click(function(e) {
+        e.preventDefault();
+        var form = $('#ballotForm').serialize();
+        if (form.search("&") < 0 || form == '') {
+            toastr.error('You must vote at least one candidate', "Preview Error");
+        } else {
+            $.ajax({
+                type: 'POST',
+                url: '{% url "preview_vote" %}',
+                data: form,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.error) {
+                        var errmsg = '';
+                        var messages = response.message;
+                        for (i in messages) {
+                            errmsg += messages[i];
+                        }
+                        toastr.error(errmsg, "Preview Error")
+                    } else {
+                        $('#preview_modal').modal('show');
+                        $('#preview_body').html(response.list);
+                    }
+                }
+            });
+        }
+    });
+
+    // Vertical ballot navigation
+    let currentPosition = 0;
+    const positions = $('.ballot-position');
+
+    function showPosition(index) {
+        positions.hide();
+        positions.eq(index).show();
+        updateNavigationButtons();
+    }
+
+    function updateNavigationButtons() {
+        $('.prev-position').prop('disabled', currentPosition === 0);
+        $('.next-position').prop('disabled', currentPosition === positions.length - 1);
+        if (currentPosition === positions.length - 1) {
+            $('.next-position').text('Submit');
+        } else {
+            $('.next-position').text('Next');
+        }
+    }
+
+    $(document).on('click', '.next-position', function() {
+        if (currentPosition < positions.length - 1) {
+            currentPosition++;
+            showPosition(currentPosition);
+        } else {
+            // Submit the form
+            $('#ballotForm').submit();
+        }
+    });
+
+    $(document).on('click', '.prev-position', function() {
+        if (currentPosition > 0) {
+            currentPosition--;
+            showPosition(currentPosition);
+        }
+    });
+
+    // Show the first position immediately
+    showPosition(0);
+});
+
+</script>
+{% endblock custom_js %}
+
+{% block modal %}
+<!-- Terms Modal -->
+<div class="modal fade" id="terms_modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Terms and Conditions</h4>
+      </div>
+      <div class="modal-body">
+        <!-- Add your terms and conditions content here -->
+         <pre>IIIT Bhagalpur General Gymkhana Election Rules 2024-25
+1. Structure:
+The structure for the student gymkhana is as follows for which general elections will be held:
+• Vice President, Student Gymkhana Council (SGC).
+• Institute General Secretary, Cultural Board.
+• Institute General Secretary, EBSB Board.
+• Institute General Secretary, Sports Board.
+• Institute General Secretary, Technical Board.
+• Institute General Secretary, Hostel Affairs Board
+2. Schedule of Election:
+S. No. Date Event
+1. 24/12/2023 Call for Nomination & Manifesto submission begins
+2. 06/01/2024 Nomination filing & Manifesto submission ends
+3. 10/01/2024 Verification of nominations
+4. 12/01/2024 Final list of candidates and online election
+5. 22/01/2024 Interview Schedule Notification of final contestants
+6. 29/01/2024 Offline Interview from 15:00 Hrs to 19:00 Hrs only
+7. 31/01/2024 Results Declaration
+3. Eligibility Criteria for Contestants:
+• He/she must be a hosteller and bonafide student of IIIT Bhagalpur.
+• For the post of Vice President, SGC, He/she must have registered for at least 05
+semesters and should have at least 2 semesters of stay remaining. Also, the contestant
+must be a resident of IIIT Bhagalpur campus during his/her tenure.
+          • For the post of Institute General Secretaries, He/she must have registered for at least 03
+          semesters and should have at least 02 semesters of stay remaining. Also, the contestant
+          must be a resident of IIIT Bhagalpur campus during his/her tenure.
+          • He/she should have CGPA greater than 8.0.
+          • He/she must not have any backlog throughout the curriculum and no pending dues.
+          • One post is reserved for female students.
+          • At the time of application, a contestant should not have been tried and/or convicted of any
+          criminal offence or misdemeanours. The contestant must not have been proven guilty by
+          any disciplinary committee.
+          • Associate Dean, Student welfare will be the final Authority for any discrepancies in
+          eligibility criteria.
+          • The decision of the President, Student Gymkhana Council (Director, IIIT Bhagalpur) will
+          be binding in all cases of disputes and exceptions in these rules.
+          4. Rules for nominations:
+          • The contestant must fill the prescribed format of nomination form with detailed agenda &
+          credentials.
+          • You need to submit the nomination form along with detailed agenda to office of Associate
+          Dean, Student Welfare.
+          • Withdrawals, if any must be made by the contestants by 08-01-2024, by writing an email
+          to the Associate Dean, SW (dosa@iiitbh.ac.in).
+          • The Associate Dean, SA reserves the right to cancel any candidature if he/she feels that
+          the supporting documents are not authentic.
+          • Candidates contesting for any position in Gymkhana must get their credentials verified on
+          the day of filing the nomination for.
+          • Final list of contestants will be sent via email to all the students by the Associate Dean,
+          SW soon after closing the date for nomination.
+          5. Online Election and personal Interview:
+          The Vice President and Institute General Secretaries shall be elected through online election and
+          offline interview mode for a tenure of one year or till further order. The weightage for the election
+          poll and interview will be 50% each. The process of online election and offline interview is as
+          follows:
+          • The google form will be shared with the students for casting their votes.
+          • The interview will be conducted in offline mode at conference room, Academic Building.
+          • You should be ready at your scheduled time of presentation.
+          • Each contestant should be ready with the PPT.
+          • In the PPT, you should include the Self-introduction, about the post contesting, why you
+          are suitable for this post, Agenda, and plan for 01 year, etc.
+          • 10 minutes will be given for the presentation.
+          • After the completion of the presentation, you should close the PPT and face the interview.
+          6. Declaration of results:
+          The Associate Dean, Student Welfare will forward the results to the Director for the necessary
+          approval. On receipt of the approval from the Director, result will be declared through e-mail to
+          the students. </pre>
+      </div>
+      <style>
+        .modal-body
+        {
+          width: 100%;
+        }
+      </style>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="accept_terms">Accept</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bio Modal -->
+<div class="modal fade" id="bio">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title"><b><span class="candidate"></span></b></h4>
+      </div>
+      <div class="modal-body">
+        <p id="plat_view"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default btn-flat pull-left" data-dismiss="modal"><i class="fa fa-close"></i> Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="preview_modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <h4 class="modal-title">Vote Preview</h4>
+      </div>
+      <div class="modal-body">
+        <div id="preview_body"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default btn-flat pull-left" data-dismiss="modal"><i class="fa fa-close"></i> Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock modal %}
+
+
+  
+
+
